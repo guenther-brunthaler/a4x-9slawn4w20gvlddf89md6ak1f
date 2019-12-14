@@ -13,6 +13,8 @@
 #include <string.h>
 #include <assert.h>
 
+#define DIM(array) (sizeof(array) / sizeof *(array))
+
 typedef struct resource_context_4th_generation r4g;
 typedef void (*r4g_dtor)(r4g *rc);
 struct resource_context_4th_generation {
@@ -107,26 +109,144 @@ static void error_reporter_dtor(r4g *rc) {
    }
 }
 
+typedef struct {
+   unsigned char sbox[1 << 8];
+   unsigned i, j;
+} a4;
+
+static void a4_init(a4 *ac) {
+   unsigned i;
+   unsigned char (*s)[DIM(ac->sbox)]= &ac->sbox;
+   for (i= DIM(*s); i--; ) (*s)[i]= (unsigned char)i;
+   ac->i= ac->j= 0;
+}
+
+static void a4_feed(a4 *ac, char const *key_segment, size_t bytes) {
+   unsigned i= ac->i, j= ac->j;
+   size_t k;
+   unsigned char (*s)[DIM(ac->sbox)]= &ac->sbox;
+   for (k= 0; k < bytes; ++k) {
+      j= j + (*s)[i] + (unsigned char)key_segment[k] & DIM(*s) - 1;
+      if (++i == DIM(*s)) i= 0;
+      {
+         unsigned char t;
+         t= (*s)[i]; (*s)[i]= (*s)[j]; (*s)[j]= t;
+      }
+   }
+   ac->i= i; ac->j= j;
+}
+
+static void a4_warmup(a4 *ac) {
+   unsigned i, j, k= 4 * 3 * DIM(ac->sbox);
+   unsigned char (*s)[DIM(ac->sbox)]= &ac->sbox;
+   i= j= 0;
+   while (k--) {
+      if (++i == DIM(*s)) i= 0;
+      j= j + (*s)[i] & DIM(*s) - 1;
+      {
+         unsigned char t;
+         t= (*s)[i]; (*s)[i]= (*s)[j]; (*s)[j]= t;
+      }
+   }
+   ac->i= i; ac->j= j;
+}
+
+static void a4_fill(a4 *ac, void *data, size_t bytes) {
+   unsigned char *d= data;
+   unsigned i= ac->i, j= ac->j;
+   size_t k;
+   unsigned char (*s)[DIM(ac->sbox)]= &ac->sbox;
+   for (k= 0; k < bytes; ++k) {
+      if (++i == DIM(*s)) i= 0;
+      j= j + (*s)[i] & DIM(*s) - 1;
+      {
+         unsigned char t;
+         t= (*s)[i]; (*s)[i]= (*s)[j]; (*s)[j]= t;
+      }
+      d[k]= (*s)[((*s)[i] + (*s)[j]) & DIM(*s) - 1];
+   }
+   ac->i= i; ac->j= j;
+}
+
+static void a4_encrypt_xa(a4 *ac, void *data, size_t bytes) {
+   unsigned char *d= data;
+   unsigned i= ac->i, j= ac->j;
+   size_t k;
+   unsigned char (*s)[DIM(ac->sbox)]= &ac->sbox;
+   for (k= 0; k < bytes; ++k) {
+      if (++i == DIM(*s)) i= 0;
+      j= j + (*s)[i] & DIM(*s) - 1;
+      {
+         unsigned char t;
+         t= (*s)[i]; (*s)[i]= (*s)[j]; (*s)[j]= t;
+      }
+      d[k]^= (*s)[((*s)[i] + (*s)[j]) & DIM(*s) - 1];
+      if (++i == DIM(*s)) i= 0;
+      j= j + (*s)[i] & DIM(*s) - 1;
+      {
+         unsigned char t;
+         t= (*s)[i]; (*s)[i]= (*s)[j]; (*s)[j]= t;
+      }
+      d[k]+= (*s)[((*s)[i] + (*s)[j]) & DIM(*s) - 1];
+   }
+   ac->i= i; ac->j= j;
+}
+
+static void a4_decrypt_xa(a4 *ac, void *data, size_t bytes) {
+   unsigned char *d= data;
+   unsigned i= ac->i, j= ac->j;
+   size_t k;
+   unsigned char (*s)[DIM(ac->sbox)]= &ac->sbox;
+   for (k= 0; k < bytes; ++k) {
+      if (++i == DIM(*s)) i= 0;
+      j= j + (*s)[i] & DIM(*s) - 1;
+      {
+         unsigned char t;
+         t= (*s)[i]; (*s)[i]= (*s)[j]; (*s)[j]= t;
+      }
+      d[k]-= (*s)[((*s)[i] + (*s)[j]) & DIM(*s) - 1];
+      if (++i == DIM(*s)) i= 0;
+      j= j + (*s)[i] & DIM(*s) - 1;
+      {
+         unsigned char t;
+         t= (*s)[i]; (*s)[i]= (*s)[j]; (*s)[j]= t;
+      }
+      d[k]^= (*s)[((*s)[i] + (*s)[j]) & DIM(*s) - 1];
+   }
+   ac->i= i; ac->j= j;
+}
+
 int main(int argc, char **argv) {
    r4g *rc= r4g_c1();
-   int optind= 0;
+   struct minimal_resource error_reporter;
+   int decrypt= -1;
+   error_reporter.dtor= &error_reporter_dtor;
+   error_reporter.saved= rc->rlist;
+   rc->rlist= &error_reporter.dtor;
    {
-      struct minimal_resource r;
-      r.dtor= &error_reporter_dtor;
-      (void)fprintf(stderr, "DTOR = %p\n", r.dtor);
-      r.saved= rc->rlist;
-      (void)fprintf(stderr, "SAVED = %p\n", r.saved);
-      rc->rlist= &r.dtor;
-   }
-   {
-      int opt, optpos= 0;
-      while (opt= getopt_simplest(&optind, &optpos, argc, argv)) {
-         switch (opt) {
-            case 'e':
-            case 'd':
-            default: error_c1(rc, "Unrecognized command line option!");
+      int optind= 0;
+      {
+         int opt, optpos= 0;
+         while (opt= getopt_simplest(&optind, &optpos, argc, argv)) {
+            switch (opt) {
+               case 'e': decrypt= 0; break;
+               case 'd': decrypt= 1; break;
+               default: error_c1(rc, "Unrecognized command line option!");
+            }
          }
       }
+      if (optind != argc - 1) {
+         error_c1(
+               rc
+            ,  "Please specify the path to the key file"
+               " as the only non-option argument!"
+         );
+      }
+   }
+   if (decrypt < 0) {
+      error_c1(
+         rc, "Please select encryption with -e or decryption with -d!"
+      );
    }
    if (fflush(0)) error_c1(rc, "Write error!");
    release_c1(rc);
