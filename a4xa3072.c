@@ -21,6 +21,10 @@ struct resource_context_4th_generation {
    r4g_dtor *rlist; /* Address of pointer to dtor in last resource. */
 };
 
+struct minimal_resource {
+   r4g_dtor dtor, *saved;
+};
+
 /* Example: R4G_DEFINE_INIT_RPTR(struct my_resource, *r=, rc, dtor); */
 #define R4G_DEFINE_INIT_RPTR(resource_t, var_eq, r4g_rc, dtor_member) \
    resource_t var_eq (void *)( \
@@ -45,11 +49,6 @@ static void error_c1(r4g *rc, char const *static_message) {
    }
    release_c1(rc);
    exit(EXIT_FAILURE);
-}
-
-static void clear_error_c1(r4g *rc) {
-   rc->errors= 0;
-   rc->static_error_message= 0;
 }
 
 static int getopt_simplest(
@@ -90,9 +89,35 @@ static int getopt_simplest(
    return c;
 }
 
+static void error_reporter_dtor(r4g *rc) {
+   R4G_DEFINE_INIT_RPTR(struct minimal_resource, *r=, rc, dtor);
+   rc->rlist= r->saved;
+   if (!rc->errors) return;
+   (void)fprintf(
+      stderr, "%s\n", rc->static_error_message
+         ?  rc->static_error_message
+         :  "Internal error!"
+   );
+   if (rc->errors != 1) {
+      (void)fprintf(
+            stderr, "(%d%s follow-up errors also occurred.)\n"
+         ,  rc->errors < 0 ? -rc->errors : rc->errors
+         ,  rc->errors < 0 ? " or more" : ""
+      );
+   }
+}
+
 int main(int argc, char **argv) {
    r4g *rc= r4g_c1();
    int optind= 0;
+   {
+      struct minimal_resource r;
+      r.dtor= &error_reporter_dtor;
+      (void)fprintf(stderr, "DTOR = %p\n", r.dtor);
+      r.saved= rc->rlist;
+      (void)fprintf(stderr, "SAVED = %p\n", r.saved);
+      rc->rlist= &r.dtor;
+   }
    {
       int opt, optpos= 0;
       while (opt= getopt_simplest(&optind, &optpos, argc, argv)) {
