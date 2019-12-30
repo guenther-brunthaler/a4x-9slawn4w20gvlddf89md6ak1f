@@ -1,12 +1,12 @@
-ARCFOUR-XA-drop3072
-===================
-v2019.351
+ARCFOUR-XA
+==========
+v2019.364
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
 Either option -e (for encryption) or -d (for decryption) is mandatory in order to specify the operation to be performed.
 
-The utiltity combines the standard ARCFOUR stream cipher algorithm with an augmented key setup and a customized mode of operation in order to make it more secure.
+The utiltity combines the standard ARCFOUR stream cipher algorithm with modified key setup and a customized mode of operation in order to make it more secure.
 
 All encryptions will be salted, allowing safe re-use of the same encryption key for different messages, even if the messages happen to be identical.
 
@@ -28,7 +28,7 @@ This as a generalized description of the standard ARCFOUR algorithm, which is us
 
 Details:
 
-* This basic algorithm is the same for standard ARCFOUR implementations as well as for the extended ARCFOUR-XA-drop3072 algorithm.
+* This basic algorithm is the same for standard ARCFOUR implementations as well as for the extended ARCFOUR-XA algorithm.
 
 * As hinted by step 1, all indexes to array s[] have to be reduced modulo the array's size, which is 256 elements. This is not explicitly mentioned in the remaining steps, but has to be applied there too.
 
@@ -45,24 +45,158 @@ Details:
 * In the standard ARCFOUR algorithm, the CPRNG-sequence produced by step 6 is directly XORed with the input stream in order to encrypt or decrypt it.
 
 
-Augmented key setup
--------------------
+Modified key setup
+------------------
 
-As mentioned before, ARCFOUR-XA-drop3072 does not use the standard ARCFOUR key setup, but rather an augmented version of it.
+As mentioned before, ARCFOUR-XA does not use the standard ARCFOUR key setup, but rather an modified version of it.
 
-* If the key size is exactly 256 octets, the original ARCFOUR key setup algorithm is used unchanged.
+* All bytes of the key are fed into step 4 of the basic algorithm. Feeding does not stop after the first 256 octets of the key nor will the key be recycled and fed multiple times into step 4 if it is shorter than 256 octets.
 
-* If the key size is greater than 256 octets, the original ARCFOUR key setup is used unchanged for the first 256 octets, but it is then forcefully continued until all octets of the key have been processed. It only stops at step 7 after the last octet of the key has been processed.
+* After the all key bytes have been fed into step 4, an octet with value 0x80 is fed in order to separate the key stream from its suffix.
 
-* If the key size is less then 256 octets, it is stretched into at least 256 + 2 octets using the following simple algorithm: Key segments constructed from the key are repeated as few times as possible in order for the combined length of the segments to reach at least the same size that a key segment formed for a key of 256 octets would have. Every key segment consists of the concatenation of the key, the key size (which may be 0), and a repetition counter (starting with 0). Both the key size and the counter are stored as an octet. That means every segment used for key stretching has the size of the key plus 2 octets. After stretching the key, the augmented key setup as explained for the other cases is used to actually process the stretched key.
+* The key stream suffix is fed last into step 4. It consists of an octet representing the number of octets which will follow as the remainder of the suffix. Then the number of bytes in the key are fed as a base-256 big-endian integer with as few octets as possible (but at least one octet).
 
-* After processing all octets of the (possibly stretched) key as explained above, step 1 of the generalized description is executed again. Then the normal standard ARCFOUR algorithm is run 3072 (= 4 * 768) times in order to "warm up" the CPRNG and protect against several known attacks on standard ARCFOUR (which does not do such warmup). The output octets generated during this warmup phase are not used and just thrown away.
+* After processing all octets of the (possibly stretched) key as explained above, step 1 of the generalized description is executed again. Then the normal standard ARCFOUR algorithm is run 3328 (= 256 + 4 * 768) times in order to "warm up" the CPRNG and protect against several known attacks on standard ARCFOUR (which does not do such warmup). The output octets generated during this warmup phase are not used and just thrown away.
+
+
+Key setup Q & A
+~~~~~~~~~~~~~~~
+
+Question: Why not recyling the key?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The original algorithm recylces the key until 256 bytes of key material have been fed into step 4. Why don't you do this? Isn't the modified key setup less secure?
+
+Answer: We don't need to recycle the key because we have added the "warmup phase" as a replacement. Also, adding the same key multiple times does not increase the entropy of the internal state. See the next answer for details.
+
+In addition, the primitive cyclic repetition of the key in the original algorithm led to the fact that keys "HA", "HAHA" and "HAHAHA" are all the same. This has all been fixed in the new key setup.
+
+
+Question: Why 3328 rounds?!?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Answer: The warmup-count of 256 + 4 * 768 has been chosen as follows: The normal SCAN default is to throw way 768 bytes ("ARCFOUR-DROP768"). It has however been mentioned that 3072 bytes (= 4 * 768) would be "more conservative". So we use that, because we want to be convervative about security! The 256 additional skips have been added due to the fact that the modified key setup is actually *shortened* compared to the original one: The original key setup will always process 256 octets, even if the key is shorter. As we allow keys down to a size of 0 bytes, we added 256 to the warmup count in order to process at least as many octets as the original algorithm even in that case.
+
+
+Question: Why shorten the key setup?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Why not feed the key into step 4 multiple times like the original algorithm does?
+
+Answer: The original algorithm did not throw away any bytes at the end of the key setup phase. It still had to initialize all 256 sbox-entries, though. So it recycled the key as a simple way to achieve that without extra code. But there is no real advantage by feeding the same key multiple times. This cannot increase the entropy of the sbox. So adding any octets has the same effect (stirring the sbox) as recycling the key. So we add a large number of binary zero key bytes instead, which also stirs the sbox.
+
+Adding binary zero key bytes is the same as just running the basic core algorithm, because optional_next_key_octet() returns 0 outside of the key setup which is exactly the same as providing a key byte of binary zero within the key setup.
+
+
+Why not stop after 256 key octets like the original algorithm?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The key setup only needs to stir around 256 octets of the sbox. After 256 steps, all original octets have been moved, so not stop but stir more?
+
+Answer: First of all, it is never a good idea to throw away available key material. The more key bytes are used to stir the sbox, the greater its entropy will become up the the maximum defined by the structure of the sbox (around 1684 bit).
+
+
+Aren't keys longer than 256 octets useless?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Actually yes, because the sbox cannot store more than about 1684 bits of entropy, which is 211 octets (rounded up).
+
+But that only refers to completely random binary key bytes.
+
+If keys are not as random, either because the random number generator has biases, or the key is human-readable text rather than random bytes, then a longer key size can compensate for the reduced entropy per key byte.
+
+
+What exactly is the "key"? Is it a pass-phrase or something binary?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The key is binary. But as any text can also be interpreted as binary data, a text file is equally fine as a key file.
+
+There is also no inherent advantage of a binary random key over a text file except that a random key will provide more entropy per byte and can thus be shorter than the text file for the same level of security.
+
+But as this implementation handles key files of arbitrary size, it is always possible to make a text pass phrase as long as necessary in order to match the security of even the highest-quality binary random key.
+
+Another different thing to consider, however, is portability.
+
+As long as you just copy an existing key file to a different platform after creating it for the first time on some plaform, portability is not an issue: The binary contents of the file will ever be the same.
+
+However, if you choose to input the pass phrase via the keyboard localle and then write it into a key file for use, more things need to be considered.
+
+Those are: The text-to-binary-encoding and the line-ending representation used by the local system.
+
+This is because text files, when interpreted binary like as encryption keys, always need to be encoded in some way in order to be stored as binary bytes. And all lines in a text file normally end with a newline sequence, which is also different among operating systems.
+
+In order to maximize portability, I advise using the following approach for creating binary key files out of user-provided pass phrases:
+
+* Remove the newline from the end of the input. I. e. do not include the terminating newline sequence at the end of the input line onto the keyfile. This eliminates those differences between operating systems. In addition, the newline sequence is always the same for a particular system and would therefore add little to none benefit to the entropy of the pass phrase anyway.
+
+* Encode the pass phrase as UTF-8 NFKC ("normalization form compatibility composition"), without BOM. Compared to UTF-16 and UTF-32 this has the advantage that byte order is not an issue, so the encoding is unique and no BOM is needed either.
+
+Note that plain old ASCII is a subset of UTF-8 NFKC, so you can use your pass phrase directly if it only contains ASCII characters:
+
+----
+$ tr -d '\n' < password.txt > key.bin
+----
+
+LATIN-1 is a subset of UTF-8 NFKC, too, so no special considerations about the NFKC-stuff are necessary for such pass phrases either. Do this:
+
+----
+$ iconv -t LATIN1 password.txt | iconv -f LATIN1 -t UTF-8 \
+  | tr -d '\n' > key.bin
+----
+
+Note that this will also work for ASCII pass phrases because ASCII is a subset of LATIN1, too. This version is even more secure because it checks whether the passphrase is really made up of ASCII or LATIN1 characters only and will display an error message otherwise.
+
+If you need the Euro sign, use WINDOWS-1252 instead of LATIN1 in the iconv command above. Even though this is not a subset of LATIN1, is is nevertheless a single-byte character set which is also a subset of UNICODE. This means the temporary conversion into a single-byte character set will already perform the required normalization, and the back-conversion into UNICODE will not change the normalization form.
+
+In other words, you the above approach will actually work for any single-byte code page into which the passphrase file will be converted as an intermediate step before converting further into UTF-8.
+
+Only if you have *really* special UNICODE-characters in your pass phrase or use non-western languages, you need to ensure than the UTF-8 text is normalized properly. I know of two utilities which can be used for NFKC normalization:
+
+----
+$ idn -n password.txt | tr -d '\n' > key.bin
+----
+
+(part of package "idn" on my system) and
+
+----
+$ uconv -x '::nfkc;' password.txt | tr -d '\n' > key.bin
+----
+
+(part of package "icu-devtools" on my system).
+
+But most of the time the LATIN1 character set should be sufficient, and then the above
+
+
+Question: What is the keystream terminator 0x80 good for?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Answer: Because the core key setup step 4 cannot determine between trailing binary zeros of the key and the zero bytes added by the key warmup. So the key 00 00 would be the same as 00 00 00. By adding the terminator we change the effective key to 00 00 80 and 00 00 00 80 which can now be distinguished.
+
+
+Question: Why has the size of the key been included in the keystream suffix?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Answer: Because it does not hurt and we want to use the key setup algorithm unchanged also as the basis for a cryptographic hash algorithm. Such algorithms are always threatened by prefix/suffix attacks where the attacker tries to exploit the fact that an older message with known hash value is a suffix of the new message or vice versa. Including the message size as a counter thwarts such attacks, because then messages of different size can never be prefixes or suffixes of one another.
+
+
+Question: Why using big endian for the keystream octet count?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Answer: While it is true that little endian output would be easier if the whole count was to be stored within a single variable, we want to use at least a 128 bit counter in order to ensure it will never wrap around. Not all programming languages provide 128 bit integers, so the counter will be implemented as an array of shorter integers instead. But this means that the array has to be scanned starting at the "most significant" side in order to find out how many significant octets there are, and this effort will be the same for both little- and big-endian output. The only difference is the direction in which the index runs, so there is virtually no advantage of choosing either endianness over the other. And when in doubt, I always choose big endian, because it seems more natural to me that important things come first and smaller details later. It is also the way we humans write numbers on paper, and therefore easier to decipher when reading a hex dump.
+
+
+Question: Why not using base-128 for the octet count?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is much easier to encode any unsigned integer by just outputting it in little-endian order, writing out the least significant 7 bits plus a "continuation" bit that tells whether this has been the last octet of the encoding.
+
+Answer: This is true if the whole counter fits into a single variable. But this will most likely not be the case here because the counter is too wide. Implementing the same algorithm for multi-precision integer is not as much fun or as efficient as for the single-variable case. Also, not all CPUs like shifting by 7 bit. While it is true that the ALUs of all performance-oriented CPUs have a barrel-shifter which can do this efficiently, many tiny CPUs do not have one and shifting by any amount of bits other than 1 bit will slow things down there. So it is best to avoid shifting by more than 1 bit, or at all, if this can easily be managed. Which it can in this case.
 
 
 XA Mode of Operation
 --------------------
 
-ARCFOUR-XA-drop3072 uses the XA mode of operation rather than the standard ARCFOUR method which simply XORs CPRNG octets into the input stream in order to create the output stream.
+ARCFOUR-XA uses the XA mode of operation rather than the standard ARCFOUR method which simply XORs CPRNG octets into the input stream in order to create the output stream.
 
 ARCFOUR-XA consumes 2 CPRNG octets for every encryption instead, and works as follows:
 
@@ -74,32 +208,32 @@ where "+" and "-" are addition/subtraction modulo 256 and CPRNG[j] is the jth ou
 As one might have already guessed, 'XA' stands for "XOR-Add".
 
 
-ARCFOUR-XA-drop3072-HASH
-------------------------
+ARCFOUR-XA-HASH
+---------------
 
 The following cryptographically secure hash function is used as part of the message authentication process:
 
-* The ARCFOUR-XA-drop3072 algorithm is used to encrypt an initial vector, using all octets of the message to be hashed as the key. The output of that encryption is the hash.
+* The ARCFOUR-XA algorithm is used to encrypt an initial vector, using all octets of the message to be hashed as the key. The output of that encryption is the hash.
 
 * The IV must have the same size as the intended output hash, and consists of all binary zeros by default. Customized versions of the hash may use other IVs, though.
 
-* Because the size of the IV can be chosen freely, ARCFOUR-XA-drop3072-HASH can create hashes of any desired bit sizes. An instance of the algorithm generating hashes of $N bits shall be referred to as ARCFOUR-XA-drop3072-HASH-$N.
+* Because the size of the IV can be chosen freely, ARCFOUR-XA-HASH can create hashes of any desired bit sizes. An instance of the algorithm generating hashes of $N bits shall be referred to as ARCFOUR-XA-HASH-$N.
 
 
-ARCFOUR-XA-drop3072 MAC
------------------------
+ARCFOUR-XA MAC
+--------------
 
-The ARCFOUR-XA-drop3072-HASH-512 algorithm is customized with a secret 512-bit IV instead of the all-zero default IV.
+The ARCFOUR-XA-HASH-512 algorithm is customized with a secret 512-bit IV instead of the all-zero default IV.
 
-By doing so, the ARCFOUR-XA-drop3072-HASH-512 becomes the ARCFOUR-XA-drop3072-MAC-512, and the secret IV becomes the 512-bit MAC key.
+By doing so, the ARCFOUR-XA-HASH-512 becomes the ARCFOUR-XA-MAC-512, and the secret IV becomes the 512-bit MAC key.
 
 
 Key derivation phase
 --------------------
 
-The utility used for encryption will not use ARCFOUR-XA-drop3072 directly for encryption or decryption with the user-provided key file.
+The utility used for encryption will not use ARCFOUR-XA directly for encryption or decryption with the user-provided key file.
 
-Instead, the user-provided key file will be used to set up a ARCFOUR-XA-drop3072 CPRNG which shall generate multiple binary octet strings for different purposes in the following order:
+Instead, the user-provided key file will be used to set up a ARCFOUR-XA CPRNG which shall generate multiple binary octet strings for different purposes in the following order:
 
 * 256 octets <salt_encryption>
 
@@ -117,11 +251,11 @@ Encrypted message layout
 
 The encrypted output generated by this utility will have the following structure:
 
-* 64 octets salt encrypted by ARCFOUR-XA-drop3072 with <salt_encryption> as encryption key
+* 64 octets salt encrypted by ARCFOUR-XA with <salt_encryption> as encryption key
 
-* All octets of the plaintext input message as payload encrypted with the ARCFOUR-XA-drop3072 algorithm and using <payload_encryption> as the encryption key
+* All octets of the plaintext input message as payload encrypted with the ARCFOUR-XA algorithm and using <payload_encryption> as the encryption key
 
-* 64 octets MAC calculated over all the encrypted octets before itself (i. e. over the encrypted salt and payload), using <mac_key> as the key for the ARCFOUR-XA-drop3072-MAC-512.
+* 64 octets MAC calculated over all the encrypted octets before itself (i. e. over the encrypted salt and payload), using <mac_key> as the key for the ARCFOUR-XA-MAC-512.
 
 The encrypted output stream will therefore always be 128 octets larger than the original plaintext input stream.
 
@@ -137,7 +271,7 @@ A salt only need needs to be generated for encryption.
 
 Decryption just reads the encrypted salt from the first 64 octets of the message and uses <salt_encryption> as the key for decrypting the salt.
 
-A new salt is generated by calculating the ARCFOUR-XA-drop3072-MAC-512 for some input with <salt_creation> as the MAC key.
+A new salt is generated by calculating the ARCFOUR-XA-MAC-512 for some input with <salt_creation> as the MAC key.
 
 The input used for salt creation is composed of the following components, fed onto the MAC calculation in arbitrary order:
 
@@ -149,7 +283,7 @@ The input used for salt creation is composed of the following components, fed on
 
 If possible, the utility should also keep a binary 512-bit per-user counter within some state file and increment this counter (ignoring overflow) for every encryption, then including its new value into the MAC also.
 
-The counter value may (if not existing yet) be initialized using the ARCFOUR-XA-drop3072-HASH-512 over all of some of the following data items:
+The counter value may (if not existing yet) be initialized using the ARCFOUR-XA-HASH-512 over all of some of the following data items:
 
 * The hostname as returned by `hostname -f` on Linux
 
