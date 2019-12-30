@@ -238,7 +238,7 @@ int main(int argc, char **argv) {
       if (optind != argc - 1) {
          error_c1(
                rc
-            ,  "Please specify the path to the key file"
+            ,  "Please specify the path to the binary key file"
                " as the only non-option argument!"
          );
       }

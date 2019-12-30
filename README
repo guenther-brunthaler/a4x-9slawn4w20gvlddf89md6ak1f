@@ -1,6 +1,6 @@
 ARCFOUR-XA-drop3072
 ===================
-v2019.348
+v2019.351
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -52,9 +52,9 @@ As mentioned before, ARCFOUR-XA-drop3072 does not use the standard ARCFOUR key s
 
 * If the key size is exactly 256 octets, the original ARCFOUR key setup algorithm is used unchanged.
 
-* If the key size is greater than 256 octets, the original ARCFOUR key setup is used unchanged for the first 256 octets, but is then forcefully continued until all octets of the key have been processed. It only stops at step 7 after the last octet of the key has been processed.
+* If the key size is greater than 256 octets, the original ARCFOUR key setup is used unchanged for the first 256 octets, but it is then forcefully continued until all octets of the key have been processed. It only stops at step 7 after the last octet of the key has been processed.
 
-* If the key size is less then 256 octets, it is stretched into at least 256 octets using the following simple algorithm: Key segments constructed from the key are repeated as few times as necessary in order for the combined length of the segments to reach at least 256 octets. Every such segment consists of the concatenation of the key, the key size (which may be 0), and a repetition counter (starting with 0). Both the key size and the counter are stored as an octet. That means every segment used for key stretching has the size of the key plus 2 octets. After stretching the key, the augmented key setup as explained for the other cases is used to actually process the stretched key.
+* If the key size is less then 256 octets, it is stretched into at least 256 + 2 octets using the following simple algorithm: Key segments constructed from the key are repeated as few times as possible in order for the combined length of the segments to reach at least the same size that a key segment formed for a key of 256 octets would have. Every key segment consists of the concatenation of the key, the key size (which may be 0), and a repetition counter (starting with 0). Both the key size and the counter are stored as an octet. That means every segment used for key stretching has the size of the key plus 2 octets. After stretching the key, the augmented key setup as explained for the other cases is used to actually process the stretched key.
 
 * After processing all octets of the (possibly stretched) key as explained above, step 1 of the generalized description is executed again. Then the normal standard ARCFOUR algorithm is run 3072 (= 4 * 768) times in order to "warm up" the CPRNG and protect against several known attacks on standard ARCFOUR (which does not do such warmup). The output octets generated during this warmup phase are not used and just thrown away.
 
@@ -69,7 +69,7 @@ ARCFOUR-XA consumes 2 CPRNG octets for every encryption instead, and works as fo
 C[i] = (P[i] XOR CPRNG[2 * i]) + CPRNG[2 * i + 1]
 P[i] = (C[i] - CPRNG[2 * i + 1]) XOR CPRNG[2 * i]
 
-where "+" and "-" are addition/subtraction modulo 256 and CPRNG[j] is the jth output returned by the ARCFOUR algorithm after key setup.
+where "+" and "-" are addition/subtraction modulo 256 and CPRNG[j] is the jth output (assuming the first j is 0) returned by the ARCFOUR algorithm after key setup.
 
 As one might have already guessed, 'XA' stands for "XOR-Add".
 
@@ -108,6 +108,8 @@ Instead, the user-provided key file will be used to set up a ARCFOUR-XA-drop3072
 * 256 octets <payload_encryption>
 
 * optionally (only for encryption operation) 64 octets <salt_creation>
+
+The CPRNG is derived from the encryption algorithm by encrypting an infinite stream of octets containing the value zero.
 
 
 Encrypted message layout
