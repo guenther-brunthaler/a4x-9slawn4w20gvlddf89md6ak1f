@@ -1,6 +1,6 @@
 ARCFOUR-XA
 ==========
-v2019.364
+v2019.364.1
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -18,6 +18,7 @@ Basic ARCFOUR Algorithm
 
 This as a generalized description of the standard ARCFOUR algorithm, which is used for both key setup and cryptographically-secure pseudorandom generation:
 
+....
 1. i= j= 0; s[all indices mod 256]
 2. Preset s[i]= 0 .. 255
 3. Move i one position to the right
@@ -25,6 +26,7 @@ This as a generalized description of the standard ARCFOUR algorithm, which is us
 5. Swap s[] values at indices i and j.
 6. Optionally output s[index equal to sum of values just swapped]
 7. Go back to step 3 unless finished
+....
 
 Details:
 
@@ -91,7 +93,7 @@ Adding binary zero key bytes is the same as just running the basic core algorith
 Why not stop after 256 key octets like the original algorithm?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The key setup only needs to stir around 256 octets of the sbox. After 256 steps, all original octets have been moved, so not stop but stir more?
+The key setup only needs to stir around 256 octets of the sbox. After 256 steps, all original octets have been moved, so why not stop there but stir even more?
 
 Answer: First of all, it is never a good idea to throw away available key material. The more key bytes are used to stir the sbox, the greater its entropy will become up the the maximum defined by the structure of the sbox (around 1684 bit).
 
@@ -103,7 +105,11 @@ Actually yes, because the sbox cannot store more than about 1684 bits of entropy
 
 But that only refers to completely random binary key bytes.
 
-If keys are not as random, either because the random number generator has biases, or the key is human-readable text rather than random bytes, then a longer key size can compensate for the reduced entropy per key byte.
+If keys are not as random, either because the random number generator has biases, or because the key is human-readable text or hexadeciman digits rather than random bytes, then a longer key size can compensate for the reduced entropy per key byte.
+
+For instance, the pass phrase "ABC" and "414343" have the same basic amount of entropy, because the second phrase is just a hex dump of the first one. A hex dump will be longer than the text it encodes, but the entropy of any encoding is at least the same as the plaintext that has been encoded.
+
+Actually, the entropy of the hex dump will even be a little bit (although neglectible) higher than that that of the original text, because the mere fact that it *is* a hex dump (just one of many possible encodings) also adds to the amount of information represented by the pass phrase.
 
 
 What exactly is the "key"? Is it a pass-phrase or something binary?
@@ -164,7 +170,17 @@ $ uconv -x '::nfkc;' password.txt | tr -d '\n' > key.bin
 
 (part of package "icu-devtools" on my system).
 
-But most of the time the LATIN1 character set should be sufficient, and then the above
+But most of the time the LATIN1 character set should be sufficient, and then the `iconv`-utility is enough and the `idn` or `uconv` utilities will never be required.
+
+The most important thing to remember that pass phrase or key security is all about entropy and never about a particular encoding.
+
+Security-wise it is no difference whether you use 16 bytes from /dev/random as a binary key file, or a textual hex-dump of the same bytes, or a base-62 or base-64 encoding of it: The resulting pass phrases will have different sizes, but always the same entropy and thus security.
+
+So use what you feel most comfortable with.
+
+Binary key files use less space on disk, but a base-62 (i. e. ASCII alphanumeric) password can easier be pasted in e-Mails or chats.
+
+base-64 encoding is also very handy, although any "=" characters should be stripped because they are only used for padding and not part of the encoded data themselves. (It does not hurt keeping them, however - it will just make the pass phrase longer without changing its entropy, wasting a few bytes.)
 
 
 Question: What is the keystream terminator 0x80 good for?
@@ -200,8 +216,10 @@ ARCFOUR-XA uses the XA mode of operation rather than the standard ARCFOUR method
 
 ARCFOUR-XA consumes 2 CPRNG octets for every encryption instead, and works as follows:
 
+----
 C[i] = (P[i] XOR CPRNG[2 * i]) + CPRNG[2 * i + 1]
 P[i] = (C[i] - CPRNG[2 * i + 1]) XOR CPRNG[2 * i]
+----
 
 where "+" and "-" are addition/subtraction modulo 256 and CPRNG[j] is the jth output (assuming the first j is 0) returned by the ARCFOUR algorithm after key setup.
 
