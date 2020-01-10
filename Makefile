@@ -1,10 +1,10 @@
 .POSIX:
 
-TARGETS = a4xa3072
+TARGETS = a4xa
 
 .PHONY: all clean
 
-CFLAGS = -O -s
+CFLAGS = -D NDEBUG -O -s
 
 all: $(TARGETS)
 
