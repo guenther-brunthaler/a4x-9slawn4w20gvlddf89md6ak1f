@@ -174,7 +174,7 @@ The following command will ensure that some file "password.txt" contains only AS
 
 ----
 $ iconv -t US-ASCII password.txt | tr -d '\n' > binary_secret.key
----
+----
 
 LATIN-1 is also a subset of UTF-8 NFKC, so no special considerations about the NFKC-stuff are necessary for such pass phrases either. Do this:
 
