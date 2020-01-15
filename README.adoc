@@ -105,6 +105,32 @@ Answer: We don't need to recycle the key because we have added the "warm-up phas
 In addition, the primitive cyclic repetition of the key in the original algorithm led to the fact that keys "HA", "HAHA" and "HAHAHA" are all the same. This has all been fixed in the new key setup.
 
 
+Question: What is 'entropy'?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Answer: In the context of cryptography, 'entropy' means 'true randomness'.
+
+Or maybe 'unpredictability' would describe it better.
+
+It describes the information that an attacker does not possess, cannot predict and cannot derive from other data at the attacker's disposal.
+
+Most prominently, entropy is present in the form of a key or pass phrase not known to the attacker.
+
+But entropy is also required for generating safe random salts, IVs and nonces. (Counter-based salts and nonces do not need entropy, but then of course a counter needs to be stored and updated somewhere.)
+
+Entropy cannot be "generated" by any algorithm, it can only be *harvested* from true-random sources.
+
+Generally, only few entropy sources are available to a program. "/dev/random" is the most prominent one.
+
+"/dev/urandom" on the other hand is not a suitable source for entropy. It *might* include entropy, but there is no guarantee. Therefore, if the security of keys is paramount, cryptographic random keys must never be drawn from "/dev/urandom".
+
+Unfortunately, many programs still do this. Prominent examples include openssl and openssh. Nevertheless, this is a grave mistake.
+
+If you are unlucky, depending on the exact configuration, an attacker might not just be able to decrypt the encrypted SSH-connection, but even be able to reconstruct your private SSH key!
+
+So don't underestimate the importance of entropy. It's the thing that "fuels" your cryptographic keys and pass phrases and makes them secure. But it is also required for creating ephemeral random keys used internally by many cryptographic algorithms.
+
+
 Question: Why 3328 rounds?!?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -138,9 +164,9 @@ But that only refers to completely random binary key bytes.
 
 If keys are not as random, either because the random number generator has biases, or because the key is human-chosen text or consists of a human-readable encoding (such as base-64 or hexadecimal digits) rather than binary bytes, then a longer key size can compensate for the reduced entropy per key byte.
 
-For instance, the pass phrase "ABC" and "414243" have the same basic amount of entropy, because the second phrase is just a hex dump of the first one. A hex dump will be longer than the text it encodes, but the entropy of any encoding is at least the same as the decoded data.
+For instance, the pass phrase "ABC" and "414243" have the same basic amount of entropy, because the second phrase is just a hex dump of the first one. A hex dump will be longer than the text it encodes, but the entropy of any encoding is the same as that of the decoded data.
 
-Actually, the entropy of the hex dump will even be a little bit (although neglectible) higher than that that of the original text, because the mere fact that it *is* a hex dump (just one of many possible encodings) also adds to the amount of information represented by the hex dump.
+Think of entropy as if it were energy. One can transform one form of energy into other forms, or convert between matter and energy. But none of this changes the amount of energy present.
 
 
 What exactly is the "key"? Is it a pass-phrase or something binary?

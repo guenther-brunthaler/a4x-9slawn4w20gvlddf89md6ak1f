@@ -33,6 +33,9 @@ struct minimal_resource {
       (char *)(r4g_rc)->rlist - offsetof(resource_t, dtor_member) \
    )
 
+/* Return translated literal string if translations have been enabled. */
+#define T(msg) msg
+
 static r4g *r4g_c1(void) {
    static r4g single_thread_context;
    return &single_thread_context;
@@ -98,13 +101,15 @@ static void error_reporter_dtor(r4g *rc) {
    (void)fprintf(
       stderr, "%s\n", rc->static_error_message
          ?  rc->static_error_message
-         :  "Internal error!"
+         :  T("Internal error!")
    );
    if (rc->errors != 1) {
       (void)fprintf(
-            stderr, "(%d%s follow-up errors also occurred.)\n"
+            stderr
+         ,  rc->errors < 0
+            ? T("(%d or more follow-up errors also occurred.)\n")
+            : T("(%d follow-up errors also occurred.)\n")
          ,  rc->errors < 0 ? -rc->errors : rc->errors
-         ,  rc->errors < 0 ? " or more" : ""
       );
    }
 }
@@ -231,24 +236,26 @@ int main(int argc, char **argv) {
             switch (opt) {
                case 'e': decrypt= 0; break;
                case 'd': decrypt= 1; break;
-               default: error_c1(rc, "Unrecognized command line option!");
+               default: error_c1(rc, T("Unrecognized command line option!"));
             }
          }
       }
       if (optind != argc - 1) {
          error_c1(
                rc
-            ,  "Please specify the path to the binary key file"
-               " as the only non-option argument!"
+            ,  T( \
+                  "Please specify the path to the binary key file" \
+                  " as the only non-option argument!" \
+               )
          );
       }
    }
    if (decrypt < 0) {
       error_c1(
-         rc, "Please select encryption with -e or decryption with -d!"
+         rc, T("Please select encryption with -e or decryption with -d!")
       );
    }
-   if (fflush(0)) error_c1(rc, "Write error!");
+   if (fflush(0)) error_c1(rc, T("Write error!"));
    release_c1(rc);
    return EXIT_SUCCESS;
 }
