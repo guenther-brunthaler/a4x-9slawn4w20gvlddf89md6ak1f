@@ -1,6 +1,6 @@
 ARCFOUR-Extended
 ================
-v2020.14
+v2020.15
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -33,11 +33,11 @@ HASH_BIT_SIZE and MAC_BIT_SIZE must be a positive multiple of 8 and default to 2
 
 -H calculates a cryptographic hash over the input file and displays it as a lowercase base-32 string.
 
--m calculates a message authentication code (MAC) over the imput file and displays it as a lowercase base-32 string. The MAC is based on the provided KEY_FILE. The MAC ensures the messsage cannot be tampered with by an attacker, because then the MAC would no longer match.
+-m calculates a message authentication code (MAC) over the input file and displays it as a lowercase base-32 string. The MAC is based on the provided KEY_FILE. The MAC ensures the message cannot be tampered with by an attacker, because then the MAC would no longer match.
 
--r creates a pseudorandom sequence based on both the KEY_FILE and the optional PERSONALIZER string argument. It will only stop once the output device becomes full or the output is a pipe and the receiver (such as "dd") stops reading. This can be used to overwrite storage volumes with unpredictable data.
+-r creates a pseudo-random sequence based on both the KEY_FILE and the optional PERSONALIZER string argument. It will only stop once the output device becomes full or the output is a pipe and the receiver (such as "dd") stops reading. This can be used to overwrite storage volumes with unpredictable data.
 
--c checks that a pseudorandom sequence like the one created by -r is identical to the data read from standard input. This can be used to verify that a storage medium correctly stored all the data previously written to it using option -r.
+-c checks that a pseudo-random sequence like the one created by -r is identical to the data read from standard input. This can be used to verify that a storage medium correctly stored all the data previously written to it using option -r.
 
 -V shows the program's version number.
 
@@ -45,7 +45,7 @@ HASH_BIT_SIZE and MAC_BIT_SIZE must be a positive multiple of 8 and default to 2
 Basic ARCFOUR Algorithm
 -----------------------
 
-This as a generalized description of the standard ARCFOUR algorithm, which is used for both key setup and cryptographically-secure pseudorandom generation:
+This as a generalized description of the standard ARCFOUR algorithm, which is used for both key setup and cryptographically-secure pseudo-random generation:
 
 ....
 1. i= j= 0; s[all indices mod 256]
@@ -87,18 +87,18 @@ As mentioned before, ARCFOUR-XA does not use the standard ARCFOUR key setup, but
 
 * The key stream suffix is fed last into step 4. It starts with an octet containing the count of the remaining octets in the suffix. Those remaining octets represent the octet count of the key and are fed as a base-256 big-endian integer with as few octets as possible (but at least one octet).
 
-* After processing all octets of the (suffixed) key as explained above, step 1 of the generalized description is executed again. Then the normal standard ARCFOUR algorithm is run 3328 (= 256 + 4 * 768) times in order to "warm up" the CPRNG and protect against several known attacks on standard ARCFOUR (which does not do such warmup). The output octets generated during this warmup phase are not used and just thrown away.
+* After processing all octets of the (suffixed) key as explained above, step 1 of the generalized description is executed again. Then the normal standard ARCFOUR algorithm is run 3328 (= 256 + 4 * 768) times in order to "warm up" the CPRNG and protect against several known attacks on standard ARCFOUR (which does not do such warm-up). The output octets generated during this warm-up phase are not used and just thrown away.
 
 
 Key setup Q & A
 ~~~~~~~~~~~~~~~
 
-Question: Why not recyle the key?
+Question: Why not recycle the key?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The original algorithm recylces the key until 256 bytes of key material have been fed into step 4. Why don't you do this? Isn't the modified key setup less secure?
 
-Answer: We don't need to recycle the key because we have added the "warmup phase" as a replacement. Also, adding the same key multiple times does not increase the entropy of the internal state. See the next answer for details.
+Answer: We don't need to recycle the key because we have added the "warm-up phase" as a replacement. Also, adding the same key multiple times does not increase the entropy of the internal state. See the next answer for details.
 
 In addition, the primitive cyclic repetition of the key in the original algorithm led to the fact that keys "HA", "HAHA" and "HAHAHA" are all the same. This has all been fixed in the new key setup.
 
@@ -106,7 +106,7 @@ In addition, the primitive cyclic repetition of the key in the original algorith
 Question: Why 3328 rounds?!?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Answer: The warmup-count of 256 + 4 * 768 dropped (thrown-away) output octets has been chosen as follows: The normal SCAN default is to throw away 768 bytes ("ARCFOUR-DROP768"). It has however been mentioned that 3072 bytes (= 4 * 768) would be "more conservative". So we use that, because we definitely want to be convervative about security! The 256 additional drops have been added due to the fact that the modified key setup is actually *shortened* compared to the original one: The original key setup will always process 256 octets, even if the key is shorter. As we allow key lengths down to a size of 0 bytes, we added 256 to the warmup count in order to process at least as many octets as the original algorithm even in that case.
+Answer: The warm-up-count of 256 + 4 * 768 dropped (thrown-away) output octets has been chosen as follows: The normal SCAN default is to throw away 768 bytes ("ARCFOUR-DROP768"). It has however been mentioned that 3072 bytes (= 4 * 768) would be "more conservative". So we use that, because we definitely want to be conservative about security! The 256 additional drops have been added due to the fact that the modified key setup is actually *shortened* compared to the original one: The original key setup will always process 256 octets, even if the key is shorter. As we allow key lengths down to a size of 0 bytes, we added 256 to the warm-up count in order to process at least as many octets as the original algorithm even in that case.
 
 
 Question: Why shorten the key setup?
@@ -134,9 +134,9 @@ Theoretically yes, because the sbox cannot store more than about 1684 bits of en
 
 But that only refers to completely random binary key bytes.
 
-If keys are not as random, either because the random number generator has biases, or because the key is human-chosen text or hexadecimal digits rather than random bytes, then a longer key size can compensate for the reduced entropy per key byte.
+If keys are not as random, either because the random number generator has biases, or because the key is human-chosen text or consists of a human-readable encoding (such as base-64 or hexadecimal digits) rather than binary bytes, then a longer key size can compensate for the reduced entropy per key byte.
 
-For instance, the pass phrase "ABC" and "414343" have the same basic amount of entropy, because the second phrase is just a hex dump of the first one. A hex dump will be longer than the text it encodes, but the entropy of any encoding is at least the same as the plaintext that has been encoded.
+For instance, the pass phrase "ABC" and "414243" have the same basic amount of entropy, because the second phrase is just a hex dump of the first one. A hex dump will be longer than the text it encodes, but the entropy of any encoding is at least the same as the decoded data.
 
 Actually, the entropy of the hex dump will even be a little bit (although neglectible) higher than that that of the original text, because the mere fact that it *is* a hex dump (just one of many possible encodings) also adds to the amount of information represented by the hex dump.
 
@@ -146,13 +146,13 @@ What exactly is the "key"? Is it a pass-phrase or something binary?
 
 The key is binary. But as any text can also be interpreted as binary data, a text file is equally fine as a key file.
 
-There is also no inherent advantage of a binary key over a text file except that a binary random key will provide more entropy per byte and can thus be shorter than the text file for the same level of security.
+There is also no inherent advantage of a binary key file over a human-readable pass phrase stored in a text file except that a binary random key will provide more entropy per byte and can thus be shorter than a pass phrase for the same level of security.
 
-But as this implementation handles key files of arbitrary size, it is always possible to make a text pass phrase as long as necessary in order to match the security of even the highest-quality binary random key.
+But as this implementation allows key files of arbitrary size, it is always possible to make a text pass phrase as long as necessary in order to match the security of even the highest-quality binary random key.
 
 Another different thing to consider, however, is portability.
 
-As long as you just copy an existing key file to a different platform after creating it for the first time on some plaform, portability is not an issue: The binary contents of the file will always be the same.
+As long as you just copy an existing key file to a different platform after creating it for the first time on some platform, portability is not an issue: The binary contents of the file will always be the same.
 
 However, if you choose to input the pass phrase via the keyboard locally and then write it into a key file for use, more things need to be considered.
 
@@ -162,15 +162,16 @@ This is because text files, when interpreted binary like as encryption keys, alw
 
 In order to maximize portability, I advise using the following approach for creating binary key files out of user-provided pass phrases:
 
-* Remove the newline from the end of the input. I. e. do not include the terminating newline sequence at the end of the input line into the keyfile. This eliminates those differences between operating systems. In addition, the newline sequence is always the same for a particular system and would therefore add little to none entropy to the resulting key.
+* Remove the newline from the end of the input. I. e. do not include the terminating newline sequence at the end of the input line into the key file. This eliminates those differences between operating systems. In addition, the newline sequence is always the same for a particular system and would therefore add little to none entropy to the resulting key.
 
-* Encode the pass phrase as UTF-8 NFKC ("normalization form compatibility composition"), without BOM. Compared to UTF-16 and UTF-32 this has the advantage that byte order is not an issue, so the encoding is unique and no BOM is needed.
+* Encode the pass phrase as UTF-8 NFKC ("normalization form compatibility composition"), without any BOM ("byte-order mark"). Compared to UTF-16 and UTF-32 this has the advantage that byte order is not an issue, so the encoding is unique and no BOM is needed.
 
-Note that plain old ASCII is a subset of UTF-8 NFKC, so you can use your pass phrase directly if it only contains ASCII characters:
+Note that plain old ASCII is a subset of UTF-8 NFKC, so you can use your pass phrase directly if it only contains ASCII characters.
+
+The following command will ensure that some file "password.txt" contains only ASCII-characters:
 
 ----
-$ iconv -t US-ASCII password.txt | iconv -f US-ASCII -t UTF-8 \
-  | tr -d '\n' > binary_secret.key
+$ iconv -t US-ASCII password.txt | tr -d '\n' > binary_secret.key
 ---
 
 LATIN-1 is also a subset of UTF-8 NFKC, so no special considerations about the NFKC-stuff are necessary for such pass phrases either. Do this:
@@ -198,7 +199,7 @@ $ uconv -x '::nfkc;' password.txt | tr -d '\n' > binary_secret.key
 
 (part of package "icu-devtools" on my system).
 
-But most of the time the LATIN1 character set should be sufficient, and then the `iconv`-utility is enough and the `idn` or `uconv` utilities will never be required.
+But most of the time the ASCII, LATIN1 or WINDOWS-1252 character sets should be sufficient, and then the `iconv`-utility is enough and the `idn` or `uconv` utilities will never be required.
 
 The most important thing to remember that pass phrase or key security is all about entropy and never about a particular encoding.
 
@@ -214,7 +215,7 @@ base-64 encoding is also very handy, although any "=" characters should be strip
 Question: What is the keystream terminator 0x80 good for?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Answer: Because the core key setup step 4 cannot determine between trailing binary zeros of the key and the zero bytes added by the key warmup. So the key 00 00 would be the same as 00 00 00. By adding the terminator we change the effective key to 00 00 80 as compared to 00 00 00 80 which can now be distinguished.
+Answer: Because the core key setup step 4 cannot determine between trailing binary zeros of the key and the zero bytes added by the key warm-up. So the key 00 00 would be the same as 00 00 00. By adding the terminator we change the effective key to 00 00 80 as compared to 00 00 00 80 which can now be distinguished.
 
 
 Question: Why has the size of the key been included in the keystream suffix?

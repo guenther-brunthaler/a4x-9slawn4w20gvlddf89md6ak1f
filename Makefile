@@ -1,6 +1,6 @@
 .POSIX:
 
-TARGETS = a4xa
+TARGETS = a4x
 
 .PHONY: all clean
 
