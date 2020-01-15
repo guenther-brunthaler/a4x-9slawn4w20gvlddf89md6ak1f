@@ -1,6 +1,6 @@
-ARCFOUR-XA
-==========
-v2020.10
+ARCFOUR-Extended
+================
+v2020.14
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -11,6 +11,35 @@ The utiltity combines the standard ARCFOUR stream cipher algorithm with modified
 All encryptions will be salted, allowing safe re-use of the same encryption key for different messages, even if the messages happen to be identical.
 
 Also, an ARCFOUR-based message authentication code will be added to every encrypted message ("encrypt-then-MAC"), detecting any manipulation or corruption of the encrypted message.
+
+
+Usage
+-----
+
+$ a4x -e KEY_FILE < PLAIN_TEXT_FILE > CIPHER_TEXT_FILE
+$ a4x -d KEY_FILE < CIPHER_TEXT_FILE > PLAIN_TEXT_FILE
+$ a4x -h
+$ a4x -H [ HASH_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_HASH
+$ a4x -m KEY_FILE [ MAC_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_MAC
+$ a4x -r KEY_FILE [ PERSONALIZER ] > BINARY_PSEUDORANDOM_FILE
+$ a4x -c KEY_FILE [ PERSONALIZER ] < BINARY_PSEUDORANDOM_FILE
+$ a4x -V
+
+HASH_BIT_SIZE and MAC_BIT_SIZE must be a positive multiple of 8 and default to 256. Other popular choices for the hash size are 160, 192, 224, 384 and 512 bit.
+
+-e and -d encrypt/decrypt the input file. Encrypting also prepends a 256-bit salt and appends a 256-bit MAC to the output stream, and decrypting verifies that MAC. Because of the salt and the MAC, the ciphertext will be 64 bytes larger than the plaintext.
+
+-h shows usage help.
+
+-H calculates a cryptographic hash over the input file and displays it as a lowercase base-32 string.
+
+-m calculates a message authentication code (MAC) over the imput file and displays it as a lowercase base-32 string. The MAC is based on the provided KEY_FILE. The MAC ensures the messsage cannot be tampered with by an attacker, because then the MAC would no longer match.
+
+-r creates a pseudorandom sequence based on both the KEY_FILE and the optional PERSONALIZER string argument. It will only stop once the output device becomes full or the output is a pipe and the receiver (such as "dd") stops reading. This can be used to overwrite storage volumes with unpredictable data.
+
+-c checks that a pseudorandom sequence like the one created by -r is identical to the data read from standard input. This can be used to verify that a storage medium correctly stored all the data previously written to it using option -r.
+
+-V shows the program's version number.
 
 
 Basic ARCFOUR Algorithm
