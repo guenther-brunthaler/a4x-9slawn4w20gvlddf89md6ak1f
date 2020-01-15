@@ -1,12 +1,12 @@
 ARCFOUR-Extended
 ================
-v2020.15
+v2020.15.1
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
 Either option -e (for encryption) or -d (for decryption) is mandatory in order to specify the operation to be performed.
 
-The utiltity combines the standard ARCFOUR stream cipher algorithm with modified key setup and a customized mode of operation in order to make it more secure.
+The utility combines the standard ARCFOUR stream cipher algorithm with modified key setup and a customized mode of operation in order to make it more secure.
 
 All encryptions will be salted, allowing safe re-use of the same encryption key for different messages, even if the messages happen to be identical.
 
@@ -16,6 +16,7 @@ Also, an ARCFOUR-based message authentication code will be added to every encryp
 Usage
 -----
 
+----
 $ a4x -e KEY_FILE < PLAIN_TEXT_FILE > CIPHER_TEXT_FILE
 $ a4x -d KEY_FILE < CIPHER_TEXT_FILE > PLAIN_TEXT_FILE
 $ a4x -h
@@ -24,6 +25,7 @@ $ a4x -m KEY_FILE [ MAC_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_MAC
 $ a4x -r KEY_FILE [ PERSONALIZER ] > BINARY_PSEUDORANDOM_FILE
 $ a4x -c KEY_FILE [ PERSONALIZER ] < BINARY_PSEUDORANDOM_FILE
 $ a4x -V
+----
 
 HASH_BIT_SIZE and MAC_BIT_SIZE must be a positive multiple of 8 and default to 256. Other popular choices for the hash size are 160, 192, 224, 384 and 512 bit.
 
