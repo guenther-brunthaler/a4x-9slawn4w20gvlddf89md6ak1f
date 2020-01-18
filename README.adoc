@@ -1,6 +1,6 @@
 ARCFOUR-Extended
 ================
-v2020.18
+v2020.18.1
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -24,7 +24,10 @@ $ a4x -H [ HASH_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_HASH
 $ a4x -m KEY_FILE [ MAC_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_MAC
 $ a4x -r KEY_FILE [ PERSONALIZER ] > BINARY_PSEUDORANDOM_FILE
 $ a4x -c KEY_FILE [ PERSONALIZER ] < BINARY_PSEUDORANDOM_FILE
-$ a4x -p SALT_FILE ITERATIONS [ PERSONALIZER ] < PASS_PHRASE > BINARY_KEY_MATERIAL
+$ a4x -k SALT_FILE ITERATIONS [ PERSONALIZER ] < PASS_PHRASE > BINARY_KEY_MATERIAL
+$ a4x -p SALT_FILE ITERATIONS [ PERSONALIZER ] < PASS_PHRASE > ASCII_KEY_MATERIAL
+$ a4x -b < BINARY_DATA > BASE32_ENCODED_ASCII
+$ a4x -b -d < BASE32_ENCODED_ASCII > BINARY_DATA
 $ a4x -V
 ----
 
