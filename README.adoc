@@ -1,6 +1,6 @@
 ARCFOUR-Extended
 ================
-v2020.18.9
+v2020.18.10
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -41,7 +41,7 @@ HASH_BIT_SIZE and MAC_BIT_SIZE must be a positive multiple of 8 and default to 2
 
 -m calculates a message authentication code (MAC) over the input file. The MAC is based on the provided KEY_FILE. The MAC ensures the message cannot be tampered with by an attacker, because then the MAC would no longer match.
 
--r creates a pseudo-random sequence based on both the KEY_FILE and the optional PERSONALIZER string argument. It will only stop once the output device becomes full or the output is a pipe and the receiver (such as "dd") stops reading. This can be used to overwrite storage volumes with unpredictable data. This can also used as a password-based key-derivation algorithm or for key stretching. Just use the generated output as key material.
+-r creates a pseudo-random sequence based on both the KEY_FILE and the optional PERSONALIZER string argument. It will only stop once the output device becomes full or the output is a pipe and the receiver (such as "dd") stops reading. This can be used to overwrite storage volumes with unpredictable data.
 
 -r -d checks that a pseudo-random sequence like the one created by -r is identical to the data read from standard input. This can be used to verify that a storage medium correctly stored all the data previously written to it using option -r.
 
