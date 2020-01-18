@@ -1,6 +1,6 @@
 ARCFOUR-Extended
 ================
-v2020.18.6
+v2020.18.7
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -17,8 +17,8 @@ Usage
 -----
 
 ----
-$ a4x -e KEY_FILE < PLAIN_TEXT_FILE > CIPHER_TEXT_FILE
-$ a4x -d KEY_FILE < CIPHER_TEXT_FILE > PLAIN_TEXT_FILE
+$ a4x -e KEY_FILE < PLAINTEXT_FILE > CIPHERTEXT_FILE
+$ a4x -d KEY_FILE < CIPHERTEXT_FILE > PLAINTEXT_FILE
 $ a4x -h
 $ a4x -H [ HASH_BIT_SIZE ] < DATA_FILE > HASH
 $ a4x -m KEY_FILE [ MAC_BIT_SIZE ] < DATA_FILE > MAC
