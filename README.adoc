@@ -1,6 +1,6 @@
 ARCFOUR-Extended
 ================
-v2020.18.1
+v2020.18.2
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -20,14 +20,13 @@ Usage
 $ a4x -e KEY_FILE < PLAIN_TEXT_FILE > CIPHER_TEXT_FILE
 $ a4x -d KEY_FILE < CIPHER_TEXT_FILE > PLAIN_TEXT_FILE
 $ a4x -h
-$ a4x -H [ HASH_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_HASH
-$ a4x -m KEY_FILE [ MAC_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_MAC
-$ a4x -r KEY_FILE [ PERSONALIZER ] > BINARY_PSEUDORANDOM_FILE
-$ a4x -c KEY_FILE [ PERSONALIZER ] < BINARY_PSEUDORANDOM_FILE
-$ a4x -k SALT_FILE ITERATIONS [ PERSONALIZER ] < PASS_PHRASE > BINARY_KEY_MATERIAL
-$ a4x -p SALT_FILE ITERATIONS [ PERSONALIZER ] < PASS_PHRASE > ASCII_KEY_MATERIAL
-$ a4x -b < BINARY_DATA > BASE32_ENCODED_ASCII
-$ a4x -b -d < BASE32_ENCODED_ASCII > BINARY_DATA
+$ a4x -H [ HASH_BIT_SIZE ] < DATA_FILE > HASH
+$ a4x -m KEY_FILE [ MAC_BIT_SIZE ] < DATA_FILE > MAC
+$ a4x -r KEY_FILE [ PERSONALIZER ] > PSEUDORANDOM_DATA
+$ a4x -r -d KEY_FILE [ PERSONALIZER ] < PSEUDORANDOM_DATA
+$ a4x -p SALT_FILE ITERATIONS [ PERSONALIZER ] < PASS_PHRASE > KEY_MATERIAL
+$ a4x -a < BINARY_DATA > ASCII_ARMORED_DATA
+$ a4x -a -d < ASCII_ARMORED_DATA > BINARY_DATA
 $ a4x -V
 ----
 
@@ -37,15 +36,17 @@ HASH_BIT_SIZE and MAC_BIT_SIZE must be a positive multiple of 8 and default to 2
 
 -h shows usage help.
 
--H calculates a cryptographic hash over the input file and displays it as a lowercase base-32 string.
+-H calculates a cryptographic hash over the input file
 
--m calculates a message authentication code (MAC) over the input file and displays it as a lowercase base-32 string. The MAC is based on the provided KEY_FILE. The MAC ensures the message cannot be tampered with by an attacker, because then the MAC would no longer match.
+-m calculates a message authentication code (MAC) over the input file. The MAC is based on the provided KEY_FILE. The MAC ensures the message cannot be tampered with by an attacker, because then the MAC would no longer match.
 
 -r creates a pseudo-random sequence based on both the KEY_FILE and the optional PERSONALIZER string argument. It will only stop once the output device becomes full or the output is a pipe and the receiver (such as "dd") stops reading. This can be used to overwrite storage volumes with unpredictable data. This can also used as a password-based key-derivation algorithm or for key stretching. Just use the generated output as key material.
 
--c checks that a pseudo-random sequence like the one created by -r is identical to the data read from standard input. This can be used to verify that a storage medium correctly stored all the data previously written to it using option -r.
+-r -d checks that a pseudo-random sequence like the one created by -r is identical to the data read from standard input. This can be used to verify that a storage medium correctly stored all the data previously written to it using option -r.
 
 -p derives a key from a pass phrase read from standard input, a binary salt, and an optional personalization string. This can be used as a password-based key derivation function, such as a replacement for PBKDF2. It can also be used for key stretching. This is very similar to -r except that it reads from standard input. ITERATIONS is the amount of additional work being done for deriving the key, use 0 for the default amount. It is recommended to select a value for ITERATIONS by timing different choicess and selecting a value that takes between 0.25 and .5 seconds for completion (start outputting key material).
+
+-a can either be used alone or as a modifier with most other commands. Then used alone, "ASCII-armors" binary input and writes the human-readable ASCII encoding to standard output. -a -d reverts this transformation. ASCII-armoring consists of base-32 encoding using lower-case letters. By adding -a as a modifier to other commands, they no longer output or expect binary data but rather expect or generate ascii-armored data. ASCII-armoring will also insert a newline after every 70 bytes of output, except for -p. When decoding, -a will ignore all newlines.
 
 -V shows the program's version number.
 
