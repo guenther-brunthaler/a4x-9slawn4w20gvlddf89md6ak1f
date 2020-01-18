@@ -1,6 +1,6 @@
 ARCFOUR-Extended
 ================
-v2020.18.8
+v2020.18.9
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -369,6 +369,8 @@ The input used for salt creation is composed of the following components, fed on
 * The binary output of clock()
 
 If possible, the utility should also keep a binary 512-bit per-user counter within some state file and increment this counter (ignoring overflow) for every encryption, then including its new value into the MAC also.
+
+The counter file shall be protected by a file lock in order to assure access to it will be serialized and updates will be atomic.
 
 The counter value may (if not existing yet) be initialized using the ARCFOUR-XA-HASH-512 over all of some of the following data items:
 
