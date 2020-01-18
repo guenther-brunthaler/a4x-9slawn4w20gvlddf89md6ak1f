@@ -1,6 +1,6 @@
 ARCFOUR-Extended
 ================
-v2020.15.1
+v2020.18
 
 The utility encrypts or decrypts standard input to standard output, using the path name of a user-provided key file as its only non-option argument.
 
@@ -24,6 +24,7 @@ $ a4x -H [ HASH_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_HASH
 $ a4x -m KEY_FILE [ MAC_BIT_SIZE ] < DATA_FILE > PLAIN_TEXT_MAC
 $ a4x -r KEY_FILE [ PERSONALIZER ] > BINARY_PSEUDORANDOM_FILE
 $ a4x -c KEY_FILE [ PERSONALIZER ] < BINARY_PSEUDORANDOM_FILE
+$ a4x -p SALT_FILE ITERATIONS [ PERSONALIZER ] < PASS_PHRASE > BINARY_KEY_MATERIAL
 $ a4x -V
 ----
 
@@ -37,9 +38,11 @@ HASH_BIT_SIZE and MAC_BIT_SIZE must be a positive multiple of 8 and default to 2
 
 -m calculates a message authentication code (MAC) over the input file and displays it as a lowercase base-32 string. The MAC is based on the provided KEY_FILE. The MAC ensures the message cannot be tampered with by an attacker, because then the MAC would no longer match.
 
--r creates a pseudo-random sequence based on both the KEY_FILE and the optional PERSONALIZER string argument. It will only stop once the output device becomes full or the output is a pipe and the receiver (such as "dd") stops reading. This can be used to overwrite storage volumes with unpredictable data.
+-r creates a pseudo-random sequence based on both the KEY_FILE and the optional PERSONALIZER string argument. It will only stop once the output device becomes full or the output is a pipe and the receiver (such as "dd") stops reading. This can be used to overwrite storage volumes with unpredictable data. This can also used as a password-based key-derivation algorithm or for key stretching. Just use the generated output as key material.
 
 -c checks that a pseudo-random sequence like the one created by -r is identical to the data read from standard input. This can be used to verify that a storage medium correctly stored all the data previously written to it using option -r.
+
+-p derives a key from a pass phrase read from standard input, a binary salt, and an optional personalization string. This can be used as a password-based key derivation function, such as a replacement for PBKDF2. It can also be used for key stretching. This is very similar to -r except that it reads from standard input. ITERATIONS is the amount of additional work being done for deriving the key, use 0 for the default amount. It is recommended to select a value for ITERATIONS by timing different choicess and selecting a value that takes between 0.25 and .5 seconds for completion (start outputting key material).
 
 -V shows the program's version number.
 
@@ -290,6 +293,8 @@ The following cryptographically secure hash function is used as part of the mess
 
 * The ARCFOUR-XA algorithm is used to encrypt an initial vector, using all octets of the message to be hashed as the key. The output of that encryption is the hash.
 
+* The updating of the hash is merged with the key setup and warm-up phases. That is, instead of throwing away the octets that could be generated during key setup and the warm-up phases, all those bytes are actually used with the XA-mode to repeatedly encrypting the IV in a cyclic fashion.
+
 * The IV must have the same size as the intended output hash, and consists of all binary zeros by default. Customized versions of the hash may use other IVs, though.
 
 * Because the size of the IV can be chosen freely, ARCFOUR-XA-HASH can create hashes of any desired bit sizes. An instance of the algorithm generating hashes of $N bits shall be referred to as ARCFOUR-XA-HASH-$N.
@@ -298,9 +303,9 @@ The following cryptographically secure hash function is used as part of the mess
 ARCFOUR-XA MAC
 --------------
 
-The ARCFOUR-XA-HASH-512 algorithm is customized with a secret 512-bit IV instead of the all-zero default IV.
+The ARCFOUR-XA-HASH-256 algorithm is customized with a secret 256-bit IV instead of the all-zero default IV.
 
-By doing so, the ARCFOUR-XA-HASH-512 becomes the ARCFOUR-XA-MAC-512, and the secret IV becomes the 512-bit MAC key.
+By doing so, the ARCFOUR-XA-HASH-256 becomes the ARCFOUR-XA-MAC-256, and the secret IV becomes the 256-bit MAC key.
 
 
 Key derivation phase
@@ -310,13 +315,13 @@ The utility used for encryption will not use ARCFOUR-XA directly for encryption 
 
 Instead, the user-provided key file will be used to set up a ARCFOUR-XA CPRNG which shall generate multiple binary octet strings for different purposes in the following order:
 
-* 256 octets <salt_encryption>
+* 32 octets <salt_encryption>
 
-* 64 octets <mac_key>
+* 32 octets <mac_key>
 
-* 256 octets <payload_encryption>
+* 211 octets <payload_encryption>
 
-* optionally (only for encryption operation) 64 octets <salt_creation>
+* optionally (only for encryption operation) 32 octets <salt_creation>
 
 The CPRNG is derived from the encryption algorithm by encrypting an infinite stream of octets containing the value zero.
 
@@ -326,17 +331,17 @@ Encrypted message layout
 
 The encrypted output generated by this utility will have the following structure:
 
-* 64 octets salt encrypted by ARCFOUR-XA with <salt_encryption> as encryption key
+* 32 octets salt encrypted by ARCFOUR-XA with <salt_encryption> as encryption key
 
 * All octets of the plaintext input message as payload encrypted with the ARCFOUR-XA algorithm and using <payload_encryption> as the encryption key
 
-* 64 octets MAC calculated over all the encrypted octets before itself (i. e. over the encrypted salt and payload), using <mac_key> as the key for the ARCFOUR-XA-MAC-512.
+* 32 octets MAC calculated over all the encrypted octets before itself (i. e. over the encrypted salt and payload), using <mac_key> as the key for the ARCFOUR-XA-MAC-256.
 
-The encrypted output stream will therefore always be 128 octets larger than the original plaintext input stream.
+The encrypted output stream will therefore always be 64 octets larger than the original plaintext input stream.
 
 The length of the input message need not be known in advance for encryption/decryption.
 
-The position of the MAC within an encrypted input stream is detected by encountering EOF, which is known to be 64 octets after the first octet of the MAC.
+The position of the MAC within an encrypted input stream is detected by encountering EOF, which is known to be 32 octets after the first octet of the MAC.
 
 
 Salt generation
@@ -344,21 +349,21 @@ Salt generation
 
 A salt only need needs to be generated for encryption.
 
-Decryption just reads the encrypted salt from the first 64 octets of the message and uses <salt_encryption> as the key for decrypting the salt.
+Decryption just reads the encrypted salt from the first 32 octets of the message and uses <salt_encryption> as the key for decrypting the salt.
 
-A new salt is generated by calculating the ARCFOUR-XA-MAC-512 for some input with <salt_creation> as the MAC key.
+A new salt is generated by calculating the ARCFOUR-XA-MAC-256 for some input with <salt_creation> as the MAC key.
 
 The input used for salt creation is composed of the following components, fed onto the MAC calculation in arbitrary order:
 
-* 64 octets from /dev/random, /dev/urandom or some other OS-specific "true randomness" source
+* 32 octets from /dev/random, /dev/urandom or some other OS-specific "true randomness" source
 
 * The binary output of localtime()
 
 * The binary output of clock()
 
-If possible, the utility should also keep a binary 512-bit per-user counter within some state file and increment this counter (ignoring overflow) for every encryption, then including its new value into the MAC also.
+If possible, the utility should also keep a binary 256-bit per-user counter within some state file and increment this counter (ignoring overflow) for every encryption, then including its new value into the MAC also.
 
-The counter value may (if not existing yet) be initialized using the ARCFOUR-XA-HASH-512 over all of some of the following data items:
+The counter value may (if not existing yet) be initialized using the ARCFOUR-XA-HASH-256 over all of some of the following data items:
 
 * The hostname as returned by `hostname -f` on Linux
 
