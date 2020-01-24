@@ -1,6 +1,5 @@
+# The following line declares this Makefile as strictly POSIX-compliant.
 .POSIX:
-
-TARGETS = a4x $(a4x_OBJECTS) libfragments.a $(FRAGMENT_OBJS)
 
 # Default build options. Override these by either passing the C compiler
 # options via "CFLAGS=" directly as an argument on the "make" command line, or
@@ -15,9 +14,11 @@ LDFLAGS = -s
 PRIVATE_CFLAGS = -I include
 PRIVATE_LDFLAGS = -L .
 
+TARGETS = a4x $(a4x_OBJECTS) libfragments.a $(FRAGMENT_OBJECTS)
+
 a4x_OBJECTS = a4x.o
 
-FRAGMENT_OBJS = getopt_simplest.o r4g.o
+FRAGMENT_OBJECTS = getopt_simplest.o r4g.o
 
 # Augmented flags which are actually used for compiling.
 AUG_CFLAGS= $(CPPFLAGS) $(CFLAGS) $(PRIVATE_CFLAGS)
@@ -30,14 +31,14 @@ all: $(TARGETS)
 clean:
 	-rm $(TARGETS)
 
-libfragments.a: $(FRAGMENT_OBJS)
-	$(AR) $(ARFLAGS) $@ $(FRAGMENT_OBJS)
+libfragments.a: $(FRAGMENT_OBJECTS)
+	$(AR) $(ARFLAGS) $@ $(FRAGMENT_OBJECTS)
 
 .c.o:
 	$(CC) -o $@ $(AUG_CFLAGS) -c $<
 
 a4x: a4x.o libfragments.a
-	$(CC) -o $@ $(AUG_LDFLAGS) a4x.o -l fragments
+	$(CC) -o $@ $(AUG_LDFLAGS) a4x.o libfragments.a
 
 # Dependencies detected with "gcc -MM -I . -I include", one per line, sorted.
 
