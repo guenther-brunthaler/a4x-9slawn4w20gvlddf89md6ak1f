@@ -12,12 +12,12 @@ CFLAGS = -O
 LDFLAGS = -s
 
 # Additional flags added internally by the Makefile.
-PRIVATE_CFLAGS = -I .
+PRIVATE_CFLAGS = -I include
 PRIVATE_LDFLAGS = -L .
 
 a4x_OBJECTS = a4x.o
 
-FRAGMENT_OBJS =
+FRAGMENT_OBJS = getopt_simplest.o r4g.o
 
 # Augmented flags which are actually used for compiling.
 AUG_CFLAGS= $(CPPFLAGS) $(CFLAGS) $(PRIVATE_CFLAGS)
@@ -34,7 +34,14 @@ libfragments.a: $(FRAGMENT_OBJS)
 	$(AR) $(ARFLAGS) $@ $(FRAGMENT_OBJS)
 
 .c.o:
-	$(CC) -o $@ $(AUG_CFLAGS) $<
+	$(CC) -o $@ $(AUG_CFLAGS) -c $<
 
 a4x: a4x.o libfragments.a
-	$(CC) -o $@ $(AUG_LDFLAGS) -l fragments a4x.o
+	$(CC) -o $@ $(AUG_LDFLAGS) a4x.o -l fragments
+
+a4x.o: a4x.c include/dim_sdbrke8ae851uitgzm4nv3ea2.h \
+ include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h
+
+r4g.o: r4g.c include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h
+
+getopt_simplest.o: include/getopt_nh7lll77vb62ycgwzwf30zlln.h getopt_simplest.c
