@@ -39,9 +39,19 @@ libfragments.a: $(FRAGMENT_OBJS)
 a4x: a4x.o libfragments.a
 	$(CC) -o $@ $(AUG_LDFLAGS) a4x.o -l fragments
 
-a4x.o: a4x.c include/dim_sdbrke8ae851uitgzm4nv3ea2.h \
- include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h
+# Dependencies detected with "gcc -MM -I . -I include", one per line, sorted.
 
-r4g.o: r4g.c include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h
+a4x.o: \
+ a4x.c include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
+ include/dim_sdbrke8ae851uitgzm4nv3ea2.h \
+ include/getopt_nh7lll77vb62ycgwzwf30zlln.h \
 
-getopt_simplest.o: include/getopt_nh7lll77vb62ycgwzwf30zlln.h getopt_simplest.c
+getopt_simplest.o: \
+ getopt_simplest.c \
+ include/getopt_nh7lll77vb62ycgwzwf30zlln.h \
+
+r4g.o: \
+ include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
+ r4g.c \
+
+# Be sure to keep the empty line before THIS line.
