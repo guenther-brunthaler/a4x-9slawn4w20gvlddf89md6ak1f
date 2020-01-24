@@ -18,7 +18,15 @@ TARGETS = a4x $(a4x_OBJECTS) libfragments.a $(FRAGMENT_OBJECTS)
 
 a4x_OBJECTS = a4x.o
 
-FRAGMENT_OBJECTS = getopt_simplest.o r4g.o
+FRAGMENT_OBJECTS = \
+	fflush_c1.o \
+	fputs_c1.o \
+	getopt_simplest.o \
+	putc_c1.o \
+	putchar_c1.o \
+	puts_c1.o \
+	r4g.o \
+	raise_write_error_c1.o \
 
 # Augmented flags which are actually used for compiling.
 AUG_CFLAGS= $(CPPFLAGS) $(CFLAGS) $(PRIVATE_CFLAGS)
@@ -43,16 +51,44 @@ a4x: a4x.o libfragments.a
 # Dependencies detected with "gcc -MM -I . -I include", one per line, sorted.
 
 a4x.o: \
- a4x.c include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
- include/dim_sdbrke8ae851uitgzm4nv3ea2.h \
- include/getopt_nh7lll77vb62ycgwzwf30zlln.h \
+	a4x.c \
+	include/dim_sdbrke8ae851uitgzm4nv3ea2.h \
+	include/getopt_nh7lll77vb62ycgwzwf30zlln.h \
+	include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
+	include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
+	xl8.h \
+
+fflush_c1.o: \
+	fflush_c1.c \
+	include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
+
+fputs_c1.o: \
+	fputs_c1.c \
+	include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
 
 getopt_simplest.o: \
- getopt_simplest.c \
- include/getopt_nh7lll77vb62ycgwzwf30zlln.h \
+	getopt_simplest.c \
+	include/getopt_nh7lll77vb62ycgwzwf30zlln.h \
+
+fputc_c1.o: \
+	include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
+	fputc_c1.c \
+
+putchar_c1.o: \
+	include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
+	putchar_c1.c \
+
+puts_c1.o: \
+	include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
+	puts_c1.c \
 
 r4g.o: \
- include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
- r4g.c \
+	include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
+	r4g.c \
+
+raise_write_error_c1.o: \
+	include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
+	raise_write_error_c1.c \
+	xl8.h \
 
 # Be sure to keep the empty line before THIS line.

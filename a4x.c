@@ -1,14 +1,17 @@
-/* a4x - extended ARCFOUR application
- *
- * Provides several utility functions such as encryption or hashing, all
- * based on the original ARCFOUR core algorithm, augmented with additional
- * mechanisms based on my own ideas.
- *
- * Version 2020.24
- * Copyright (c) 2019-2020 Guenther Brunthaler. All rights reserved.
-
- * This source file is free software.
- * Distribution is permitted under the terms of the GPLv3. */
+char const SHORT_INFO[]=
+"extended ARCFOUR application\n"
+"\n"
+"Provides several utility functions such as encryption or hashing,\n"
+"all based on the original ARCFOUR core algorithm, augmented with\n"
+"additional mechanisms based on my own ideas.\n"
+;
+char const VERSION_INFO[]=
+"Version 2020.24.1\n"
+"Copyright (c) 2019-2020 Guenther Brunthaler. All rights reserved.\n"
+"\n"
+"This source file is free software.\n"
+"Distribution is permitted under the terms of the GPLv3.\n"
+;
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,11 +20,10 @@
 #include <string.h>
 #include <assert.h>
 #include <r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h>
+#include <r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h>
 #include <dim_sdbrke8ae851uitgzm4nv3ea2.h>
 #include <getopt_nh7lll77vb62ycgwzwf30zlln.h>
-
-/* Return translated literal string if translations have been enabled. */
-#define T(msg) msg
+#include "xl8.h"
 
 static void error_reporter_dtor(void) {
    R4G_DEFINE_INIT_RPTR(struct minimal_resource, *r=, dtor);
@@ -164,6 +166,11 @@ int main(int argc, char **argv) {
             switch (opt) {
                case 'e': decrypt= 0; break;
                case 'd': decrypt= 1; break;
+               case 'h':
+                  fputs_c1(argc ? argv[0] : T("(unnamed program)"), stdout);
+                  fputs_c1(" - ", stdout); puts_c1(SHORT_INFO);
+                  /* Fall through. */
+               case 'V': fputs_c1(VERSION_INFO, stdout); goto done;
                default: error_c1(T("Unrecognized command line option!"));
             }
          }
@@ -180,7 +187,8 @@ int main(int argc, char **argv) {
    if (decrypt < 0) {
       error_c1(T("Please select encryption with -e or decryption with -d!"));
    }
-   if (fflush(0)) error_c1(T("Write error!"));
+   done:
+   fflush_c1(0);
    release_c1();
    return EXIT_SUCCESS;
 }
