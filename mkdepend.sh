@@ -2,7 +2,7 @@
 # Maintainer helper script for updating project dependencies. Not needed for
 # just building the project.
 #
-# Version 2020.26
+# Version 2020.26.1
 # Copyright (c) 2020 Guenther Brunthaler. All rights reserved.
 #
 # This script is free software.
@@ -32,11 +32,13 @@ done | LC_COLLATE=C sort \
 	do
 		set -- $line
 		echo
-		println "$1 \\"; shift
-		for dep
-		do
-			println " $dep \\"
-		done \
-		| LC_COLLATE=C sort
+		{
+			println "$1"; shift
+			for dep
+			do
+				println " $dep"
+			done \
+			| LC_COLLATE=C sort
+		} | sed '$ !s/$/ \\/'
 	done
 }

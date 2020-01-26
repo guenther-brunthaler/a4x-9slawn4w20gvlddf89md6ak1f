@@ -60,41 +60,39 @@ a4x.o: \
  include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
  include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
  local_config.h \
- xl8.h \
+ xl8.h
 
 fflush_c1.o: \
  fflush_c1.c \
- include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
+ include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h
 
 fputs_c1.o: \
  fputs_c1.c \
- include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
+ include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h
 
 getopt_simplest.o: \
  getopt_simplest.c \
- include/getopt_nh7lll77vb62ycgwzwf30zlln.h \
+ include/getopt_nh7lll77vb62ycgwzwf30zlln.h
 
 putc_c1.o: \
  include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
- putc_c1.c \
+ putc_c1.c
 
 putchar_c1.o: \
  include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
- putchar_c1.c \
+ putchar_c1.c
 
 puts_c1.o: \
  include/r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h \
- puts_c1.c \
+ puts_c1.c
 
 r4g.o: \
  include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
  local_config.h \
- r4g.c \
+ r4g.c
 
 raise_write_error_c1.o: \
  include/r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h \
  local_config.h \
  raise_write_error_c1.c \
- xl8.h \
-
-# Be sure to keep the empty line before THIS line.
+ xl8.h
