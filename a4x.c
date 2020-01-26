@@ -6,23 +6,29 @@ char const SHORT_INFO[]=
 "additional mechanisms based on my own ideas.\n"
 ;
 char const VERSION_INFO[]=
-"Version 2020.24.1\n"
+"Version 2020.26\n"
 "Copyright (c) 2019-2020 Guenther Brunthaler. All rights reserved.\n"
 "\n"
 "This source file is free software.\n"
 "Distribution is permitted under the terms of the GPLv3.\n"
 ;
 
+#include <r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h>
+#include <r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h>
+#include <dim_sdbrke8ae851uitgzm4nv3ea2.h>
+#include <getopt_nh7lll77vb62ycgwzwf30zlln.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
-#include <r4g/r4g_u0ywydbuiziuzssqsi5l0mdid.h>
-#include <r4g/stdio_tsq4kr2x9qnr3sh1jgkaaf8qg.h>
-#include <dim_sdbrke8ae851uitgzm4nv3ea2.h>
-#include <getopt_nh7lll77vb62ycgwzwf30zlln.h>
+#if defined ENABLE_OPTIONAL_CTHREADS_LMGBEG53DETVLBEP2J6J4BUKY \
+&& !defined __STDC_NO_THREADS__
+   #include <threads.h>
+#else
+   #include <pthread.h>
+#endif
 #include "xl8.h"
 
 static void error_reporter_dtor(void) {
