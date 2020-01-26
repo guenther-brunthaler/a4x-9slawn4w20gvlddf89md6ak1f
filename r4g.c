@@ -1,4 +1,4 @@
-/* Version 2020.20
+/* Version 2020.26
  * Copyright (c) 2013-2020 Guenther Brunthaler. All rights reserved.
  *
  * This source file is free software.
@@ -8,10 +8,15 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#ifdef ENABLE_THREADS_8Y802YFBJ3A8H763I3XID022D
-   _Thread_local
+#ifdef PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S
+   /* Fall-back multi-threading support is *not* being used. Just define the
+    * global <r4g> variable. Note that the macro
+    * PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S may expand to nothing, in
+    * which case a simple global variable will be defined. */
+   PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S
+      struct resource_context_4th_generation r4g
+   ;
 #endif
-struct resource_context_4th_generation r4g;
 
 extern void release_c1(void) {
    while (r4g.rlist) (*r4g.rlist)();
