@@ -5,7 +5,7 @@
  * Some features of R4G are optional. This allows to build feature-reduced
  * versions of the source files which have a smaller memory footprint.
  *
- * Version 2020.24
+ * Version 2020.26
  * Copyright (c) 2016-2020 Guenther Brunthaler. All rights reserved.
  * 
  * This source file is free software.
@@ -32,6 +32,9 @@
     * the following line will #include that header file automatically. */
    #include R4G_CONFIG_H_7MPQXSRZEGRNW8FJHR4CYANWJ
 #endif
+
+/* Pointer to an R4G cleanup/destructor function. */
+typedef void (*r4g_dtor)(void);
 
 /* The central data structure for the R4G framework. One instance exists per
  * application or thread. */
@@ -74,7 +77,7 @@ struct resource_context_4th_generation {
     * resource list object where the pointer to its associated destructor
     * function is stored. Destructors need to locate the resource to be
     * destroyed using this address. */
-   void (**rlist)(void);
+   r4g_dtor *rlist;
 };
 
 /* An example of a minimal complete resource object that can be linked into
@@ -82,8 +85,8 @@ struct resource_context_4th_generation {
  * need to register a cleanup function and do not need to store any
  * object-specific data beyond what is defined here. */
 struct minimal_resource {
-   void (*dtor)(void); /* Cleanup function for this resource. */
-   void (**saved)(void); /* Saved <r4g.rlist> pointer of previous resource. */
+   r4g_dtor dtor; /* Cleanup function for this resource. */
+   r4g_dtor *saved; /* Saved <r4g.rlist> pointer of previous resource. */
 };
 
 /* Defines a pointer variable to type resource_t and initializes it with a
@@ -104,19 +107,40 @@ struct minimal_resource {
       (char *)r4g.rlist - offsetof(resource_t, dtor_member) \
    )
 
-/* This is the one well-known <r4g> variable that everyone in the R4G
+/* Declare the one well-known <r4g> variable that everyone in the R4G
  * framework will be using. */
-extern
-   #ifdef ENABLE_THREADS_8Y802YFBJ3A8H763I3XID022D
-      /* Make the <r4g> variable thread-local rather than global. This will
-       * work with every C11/C18 (or better) compiler, whether or not it
-       * supports the optional <threads.h> header. This is necessary if
-       * multiple threads want to use the R4G framework. Otherwise, only one
-       * of the threads can be capaciated to use the framework. */
-      _Thread_local
+#if !defined PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S \
+&& defined ENABLE_OPTIONAL_CTHREADS_LMGBEG53DETVLBEP2J6J4BUKY \
+&& defined __STDC_VERSION__ && __STDC_VERSION__ >= 201000L
+   /* ENABLE_OPTIONAL_CTHREADS_LMGBEG53DETVLBEP2J6J4BUKY enables the
+    * non-optional support for thread-local storage provided by C11, C18 or
+    * better, or enables a generic fallback implementation for older C
+    * standards. Note that this will work even if the optional <threads.h>
+    * header is not provided and __STDC_NO_THREADS__ is defined. */
+   #define PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S _Thread_local
+#endif
+#if !defined PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S \
+&& defined ENABLE_THREADS_8Y802YFBJ3A8H763I3XID022D
+   /* Fall-back support for multithreading. Will work with C89 or better.
+    * Call a function which returns a pointer to a per-thread instance and
+    * dereference the result, providing access via the dot operator. */
+   #define r4g (*r4g_c0())
+    /* This will typically call something like pthread_getspecific() and
+     * abort() in case of a failure. */
+   extern struct resource_context_4th_generation *r4g_c0(void);
+#else
+   /* PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S may be defined to
+      enforce a compiler-specific declarator, e. g.  '__tls' or '__thread'. */
+   #ifndef PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S
+      /* If undefined but ENABLE_THREADS_8Y802YFBJ3A8H763I3XID022D defined,
+       * define it as an empty macro. */
+      #define PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S
    #endif
-   struct resource_context_4th_generation r4g
-;
+   /* This will declare simple global variable if the macro is empty. */
+   extern PER_THREAD_QUALIFIER_0VC35WCXXRR0DWZDPTP8CUC8S
+      struct resource_context_4th_generation r4g
+   ;
+#endif
 
 /* Calls the destructor of the last entry in the specified resource list until
  * there are no more entries left. Destructors need to unlink their entries
@@ -132,12 +156,6 @@ void release_c1(void);
  * released next. The means all resources registered after <stop_at> will be
  * released, but not <stop_at> itself. */
 void release_after_c1(void (*stop_at)(void));
-
-/* Like release_c1() but stop releasing after resource <last> has been
- * released, even if releasing <last> required multiple calls of its
- * destructor. This means <last> itself as well as all resourced registered
- * after it will be released. */
-void release_until_c1(void (*last)(void));
 
 /* Raise an error. <static_message> must be a statically allocated error
  * message or null. If <r4g.static_error_message> is null, it will be set to

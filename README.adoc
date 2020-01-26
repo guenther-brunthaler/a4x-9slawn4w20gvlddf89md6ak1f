@@ -53,7 +53,7 @@ HASH_BIT_SIZE and MAC_BIT_SIZE must be a positive multiple of 8 and default to 2
 
 -V shows the program's version number.
 
--b $BUFFER_SIZE is an additional option which does not refer to a particular command. It allows to override the default I/O buffer size. The value is specified in bytes and will be rounded up to the next multiple of the system's MMU page size. Depending on the command, up to two buffers of this size will be allocated. The default is 16 MiB, but smaller default values will be attempted(by repeated halving of the buffer size, down to a minimum of 8 KiB) if not enough memory is available.
+-b $BUFFER_SIZE is an additional option which does not refer to a particular command. It can be specified together with any command. It allows to override the default I/O buffer size. The value is specified in bytes and will be rounded up to the next multiple of the system's MMU page size. Depending on the command, up to two buffers of this size will be allocated. The default is 16 MiB, but smaller default values will be attempted(by repeated halving of the buffer size, down to a minimum of 8 KiB) if not enough memory is available.
 
 
 Basic ARCFOUR Algorithm
